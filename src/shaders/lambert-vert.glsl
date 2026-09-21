@@ -18,6 +18,7 @@ uniform mat4 u_ModelInvTr;  // The inverse transpose of the model matrix.
 uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformation.
                             // We've written a static matrix for you to use for HW2,
                             // but in HW3 you'll have to generate one yourself
+uniform float u_Time; 
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -25,12 +26,101 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
+
+out vec4 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
+out float fs_MaxDist; // Max distance of a vert in the -x direction
+out float fs_Noise; // Normal offset noise
 
-const vec4 lightPos = vec4(5, 5, 3, 1); //The position of our virtual light, which is used to compute the shading of
+const vec4 lightPos = vec4(5, 0, 0, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
+
+
+#define PI 3.14159f;
+
+
+// ----------- HELPERS ------------------
+float quintic(float t) {
+    return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
+}
+
+vec3 quintic(vec3 xyz) {
+    return vec3(quintic(xyz.x),
+                quintic(xyz.y),
+                quintic(xyz.z));
+}
+
+vec3 random3Dto3D(vec3 xyz) {
+    vec3 sins = sin(vec3(dot(xyz, vec3(127.1f, 311.7f, 531.8f)),
+                         dot(xyz, vec3(269.5f, 183.3f, 121.3f)),
+                         dot(xyz, vec3(420.6f, 631.2f, 302.9f))));
+    sins *= 43758.54f;
+    return fract(sins);
+}
+
+float perlinNoise3D(vec3 uvw) {
+    float surfletSum = 0.f;
+    // Iterate over the eight corners around uvw
+    for (int dx = 0; dx <= 1; ++dx) {
+        for (int dy = 0; dy <= 1; ++dy) {
+            for (int dz = 0; dz <= 1; ++dz) {
+                vec3 gridPoint = floor(uvw) + vec3(dx, dy, dz);
+
+                // Compute falloff function
+                vec3 dist = abs(uvw - gridPoint);
+                vec3 t = vec3(1.f) - quintic(dist);
+
+                // Get random vector for the grid point
+                vec3 gradient = 2.f * random3Dto3D(gridPoint) - vec3(1.f);
+
+                // Get vector from grid point to uvw
+                vec3 diff = uvw - gridPoint;
+
+                // Get value of height field by dotting diff w/ gradient
+                float height = dot(diff, gradient);
+
+                // Scale height field by polynomial fallof func
+                surfletSum += height * t.x * t.z * t.y;
+            }
+        }
+    }
+    return surfletSum;
+}
+
+float fbm3D(vec3 uvw) {
+    float total = 0.f;
+    float freq = 2.f;
+    float amp = 0.5f;
+    float persistence = 0.5f;
+    const int octaves = 3;
+
+    for (int i = 0; i < octaves; ++i) {
+        total += perlinNoise3D(uvw * freq) * amp;
+
+        freq *= 2.f;
+        amp *= persistence;
+    }
+    return total;
+}
+
+vec2 rotatePoint2d(vec2 uv, vec2 center, float angle)
+{
+    vec2 rotatedPoint = vec2(uv.x - center.x, uv.y - center.y);
+    float newX = cos(angle) * rotatedPoint.x - sin(angle) * rotatedPoint.y;
+    rotatedPoint.y = sin(angle) * rotatedPoint.x + cos(angle) * rotatedPoint.y;
+    rotatedPoint.x = newX;
+    return rotatedPoint;
+}
+
+float bias(float t, float b) {
+    return (t / ((((1.0/b) - 2.0)*(1.0 - t))+1.0));
+}
+
+float sinTime(float amp, float freq) {
+    return (sin(u_Time * freq) * 0.5f + 0.5f) * amp;
+}
 
 void main()
 {
@@ -48,6 +138,57 @@ void main()
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 
+    // displace while in model space
+    //float offset = 0.f;
+    // PARAMS 
+    float timeScale = 0.02f;
+    float trailWidthBias = 0.93f;
+    float minLength = 4.f;
+    float maxLength = 7.f;
+    float pulseFreq = 0.06f;
+
+    float twists = 1.5f; // PI rotations around from start -> end
+    float twistSpeed = 0.06f;    
+
+        float noiseScale = 1.f;
+
+    // Pulse width/length
+    float trailWidth =  mix(1.f, 0.1f, sinTime(1.f, pulseFreq));
+    float trailLength =  mix(minLength, maxLength, sinTime(1.f, pulseFreq));
+    fs_MaxDist = maxLength * 0.75;
+
+    // Get scale based on x pos
+    float xPosBlend = vs_Pos.x/2.f + 0.5f;  // [0-1] in x
+    xPosBlend = bias(xPosBlend, trailWidthBias);
+
+    // Twist in XY plane
+    vec3 twistP = vs_Pos.xyz;
+    float angle = mix(0.f, twists*3.14, xPosBlend) + u_Time * twistSpeed;
+    twistP.yz = rotatePoint2d(twistP.yz, vec2(0.f), angle);
+
+    // Warp- offset 
+    float noiseOffset = fbm3D(vs_Pos.xyz * 0.5f) * 1.2f;
+
+    // Sample noise
+    vec3 timeOffset = vec3(u_Time * timeScale, 0.f, 0.f);
+    float noise = fbm3D(twistP.xyz * noiseScale + timeOffset + noiseOffset)*0.5f + 0.5f;
+    fs_Noise = noise;
+
+    // Split normals- along x, and yz
+    vec3 n = normalize(vs_Nor.xyz);
+    vec3 xN = vec3(n.x, 0.f, 0.f);
+    vec3 yzN = vec3(0.f, n.y, n.z);
+
+    float xBias = 0.5f;
+    float yzBias = 0.05f;
+    float xStretch = mix(trailLength, 1.f, bias(xPosBlend, xBias)); 
+    float yzStretch = mix(trailWidth, 1.f, bias(xPosBlend, yzBias));
+
+    // Offset normals
+    modelposition.xyz += (xN * xStretch + yzN * yzStretch) * noise;
+    fs_Pos = modelposition;
+
+    // output screenspace position
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is
                                              // used to render the final positions of the geometry's vertices
 }

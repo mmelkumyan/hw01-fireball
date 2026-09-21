@@ -21,6 +21,7 @@ const controls = {
 let icosphere: Icosphere;
 let square: Square;
 let prevTesselations: number = 5;
+let time: GLfloat = 0;
 
 function loadScene() {
   icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, controls.tesselations);
@@ -82,7 +83,7 @@ function main() {
     renderer.render(camera, lambert, [
       icosphere,
       // square,
-    ]);
+    ], time++);
     stats.end();
 
     // Tell the browser to call `tick` again whenever it renders a new frame
