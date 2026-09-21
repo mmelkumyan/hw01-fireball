@@ -94,6 +94,22 @@ class ShaderProgram {
     }
   }
 
+  setFloat(name: string, val: number) {
+    this.use();
+    const loc = gl.getUniformLocation(this.prog, name);
+    if (loc !== null) {
+      gl.uniform1f(loc, val);
+    }
+  }
+
+  setInt(name: string, val: number) {
+    this.use();
+    const loc = gl.getUniformLocation(this.prog, name);
+    if (loc !== null) {
+      gl.uniform1i(loc, val);
+    }
+  }
+
   draw(d: Drawable) {
     this.use();
 

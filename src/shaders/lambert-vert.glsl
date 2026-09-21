@@ -20,6 +20,16 @@ uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformati
                             // but in HW3 you'll have to generate one yourself
 uniform float u_Time; 
 
+uniform float u_TimeScale; // noise scroll rate along x
+uniform float u_TrailWidthBias; // How round the front of the fireball is
+uniform float u_MinLength; // Min length of the tail
+uniform float u_MaxLength; // Max length of the tail
+uniform float u_PulseFreq; // Rate at which we alternate between lengths
+uniform float u_Twists; // N*PI rotations around the center from start->end
+uniform float u_TwistSpeed; // Speed at which we rotate
+uniform float u_NoiseScale; // Scale of noise offset
+uniform int u_Octaves; // Number of octaves in FBM noise
+
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
 in vec4 vs_Nor;             // The array of vertex normals passed to the shader
@@ -89,14 +99,19 @@ float perlinNoise3D(vec3 uvw) {
     return surfletSum;
 }
 
+// Requires a constant bound loop
+#define MAX_OCTAVES 6
+
 float fbm3D(vec3 uvw) {
     float total = 0.f;
     float freq = 2.f;
     float amp = 0.5f;
     float persistence = 0.5f;
-    const int octaves = 3;
 
-    for (int i = 0; i < octaves; ++i) {
+    for (int i = 0; i < MAX_OCTAVES; ++i) {
+        if (i >= u_Octaves) {
+            break;
+        }
         total += perlinNoise3D(uvw * freq) * amp;
 
         freq *= 2.f;
@@ -138,40 +153,26 @@ void main()
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 
-    // displace while in model space
-    //float offset = 0.f;
-    // PARAMS 
-    float timeScale = 0.02f;
-    float trailWidthBias = 0.93f;
-    float minLength = 4.f;
-    float maxLength = 7.f;
-    float pulseFreq = 0.06f;
-
-    float twists = 1.5f; // PI rotations around from start -> end
-    float twistSpeed = 0.06f;    
-
-        float noiseScale = 1.f;
-
     // Pulse width/length
-    float trailWidth =  mix(1.f, 0.1f, sinTime(1.f, pulseFreq));
-    float trailLength =  mix(minLength, maxLength, sinTime(1.f, pulseFreq));
-    fs_MaxDist = maxLength * 0.75;
+    float trailWidth =  mix(1.f, 0.1f, sinTime(1.f, u_PulseFreq));
+    float trailLength =  mix(u_MinLength, u_MaxLength, sinTime(1.f, u_PulseFreq));
+    fs_MaxDist = u_MaxLength * 0.75;
 
     // Get scale based on x pos
     float xPosBlend = vs_Pos.x/2.f + 0.5f;  // [0-1] in x
-    xPosBlend = bias(xPosBlend, trailWidthBias);
+    xPosBlend = bias(xPosBlend, u_TrailWidthBias);
 
     // Twist in XY plane
     vec3 twistP = vs_Pos.xyz;
-    float angle = mix(0.f, twists*3.14, xPosBlend) + u_Time * twistSpeed;
+    float angle = mix(0.f, u_Twists*3.14, xPosBlend) + u_Time * u_TwistSpeed;
     twistP.yz = rotatePoint2d(twistP.yz, vec2(0.f), angle);
 
     // Warp- offset 
     float noiseOffset = fbm3D(vs_Pos.xyz * 0.5f) * 1.2f;
 
     // Sample noise
-    vec3 timeOffset = vec3(u_Time * timeScale, 0.f, 0.f);
-    float noise = fbm3D(twistP.xyz * noiseScale + timeOffset + noiseOffset)*0.5f + 0.5f;
+    vec3 timeOffset = vec3(u_Time * u_TimeScale, 0.f, 0.f);
+    float noise = fbm3D(twistP.xyz * u_NoiseScale + timeOffset + noiseOffset)*0.5f + 0.5f;
     fs_Noise = noise;
 
     // Split normals- along x, and yz
