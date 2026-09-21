@@ -48,6 +48,16 @@ class OpenGLRenderer {
       prog.draw(drawable);
     }
   }
+
+  renderBackground(camera: Camera, prog: ShaderProgram, quad: Drawable, t: GLfloat) {
+    prog.setTime(t);
+    prog.setDimensions(this.canvas.width, this.canvas.height);
+    prog.setEyeRefUp(camera.controls.eye, camera.controls.center, camera.controls.up);
+
+    gl.depthMask(false);
+    prog.draw(quad);
+    gl.depthMask(true);
+  }
 };
 
 export default OpenGLRenderer;

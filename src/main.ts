@@ -8,8 +8,11 @@ import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
-import lambertVertSource from './shaders/lambert-vert.glsl?raw';
-import lambertFragSource from './shaders/lambert-frag.glsl?raw';
+import lambertVertSource from './shaders/lambert-vert.glsl';
+import lambertFragSource from './shaders/lambert-frag.glsl';
+
+import backgroundVertSource from './shaders/background-vert.glsl';
+import backgroundFragSource from './shaders/background-frag.glsl';
 
 const shaderParams = {
   u_TimeScale: 0.02,
@@ -112,6 +115,11 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, lambertFragSource),
   ]);
 
+  const background = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, backgroundVertSource),
+    new Shader(gl.FRAGMENT_SHADER, backgroundFragSource),
+  ]);
+
   // This function will be called every frame
   function tick() {
     camera.update();
@@ -124,11 +132,15 @@ function main() {
       icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, prevTesselations);
       icosphere.create();
     }
+
+    // Render background
+    renderer.renderBackground(camera, background, square, time);
+    // Render fireball
     renderer.render(camera, lambert, [
       icosphere,
-      // square,
     ], time++, shaderParams, intParams);
     stats.end();
+
 
     // Tell the browser to call `tick` again whenever it renders a new frame
     requestAnimationFrame(tick);

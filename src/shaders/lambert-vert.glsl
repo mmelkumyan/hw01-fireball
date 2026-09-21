@@ -44,94 +44,11 @@ out vec4 fs_Col;            // The color of each vertex. This is implicitly pass
 out float fs_MaxDist; // Max distance of a vert in the -x direction
 out float fs_Noise; // Normal offset noise
 
+#include "./common.glsl"
+
 const vec4 lightPos = vec4(5, 0, 0, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
 
-
-#define PI 3.14159f;
-
-
-// ----------- HELPERS ------------------
-float quintic(float t) {
-    return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
-}
-
-vec3 quintic(vec3 xyz) {
-    return vec3(quintic(xyz.x),
-                quintic(xyz.y),
-                quintic(xyz.z));
-}
-
-vec3 random3Dto3D(vec3 xyz) {
-    vec3 sins = sin(vec3(dot(xyz, vec3(127.1f, 311.7f, 531.8f)),
-                         dot(xyz, vec3(269.5f, 183.3f, 121.3f)),
-                         dot(xyz, vec3(420.6f, 631.2f, 302.9f))));
-    sins *= 43758.54f;
-    return fract(sins);
-}
-
-float perlinNoise3D(vec3 uvw) {
-    float surfletSum = 0.f;
-    // Iterate over the eight corners around uvw
-    for (int dx = 0; dx <= 1; ++dx) {
-        for (int dy = 0; dy <= 1; ++dy) {
-            for (int dz = 0; dz <= 1; ++dz) {
-                vec3 gridPoint = floor(uvw) + vec3(dx, dy, dz);
-
-                // Compute falloff function
-                vec3 dist = abs(uvw - gridPoint);
-                vec3 t = vec3(1.f) - quintic(dist);
-
-                // Get random vector for the grid point
-                vec3 gradient = 2.f * random3Dto3D(gridPoint) - vec3(1.f);
-
-                // Get vector from grid point to uvw
-                vec3 diff = uvw - gridPoint;
-
-                // Get value of height field by dotting diff w/ gradient
-                float height = dot(diff, gradient);
-
-                // Scale height field by polynomial fallof func
-                surfletSum += height * t.x * t.z * t.y;
-            }
-        }
-    }
-    return surfletSum;
-}
-
-// Requires a constant bound loop
-#define MAX_OCTAVES 6
-
-float fbm3D(vec3 uvw) {
-    float total = 0.f;
-    float freq = 2.f;
-    float amp = 0.5f;
-    float persistence = 0.5f;
-
-    for (int i = 0; i < MAX_OCTAVES; ++i) {
-        if (i >= u_Octaves) {
-            break;
-        }
-        total += perlinNoise3D(uvw * freq) * amp;
-
-        freq *= 2.f;
-        amp *= persistence;
-    }
-    return total;
-}
-
-vec2 rotatePoint2d(vec2 uv, vec2 center, float angle)
-{
-    vec2 rotatedPoint = vec2(uv.x - center.x, uv.y - center.y);
-    float newX = cos(angle) * rotatedPoint.x - sin(angle) * rotatedPoint.y;
-    rotatedPoint.y = sin(angle) * rotatedPoint.x + cos(angle) * rotatedPoint.y;
-    rotatedPoint.x = newX;
-    return rotatedPoint;
-}
-
-float bias(float t, float b) {
-    return (t / ((((1.0/b) - 2.0)*(1.0 - t))+1.0));
-}
 
 float sinTime(float amp, float freq) {
     return (sin(u_Time * freq) * 0.5f + 0.5f) * amp;
@@ -168,11 +85,11 @@ void main()
     twistP.yz = rotatePoint2d(twistP.yz, vec2(0.f), angle);
 
     // Warp- offset 
-    float noiseOffset = fbm3D(vs_Pos.xyz * 0.5f) * 1.2f;
+    float noiseOffset = fbm3D(vs_Pos.xyz * 0.5f, u_Octaves) * 1.2f;
 
     // Sample noise
     vec3 timeOffset = vec3(u_Time * u_TimeScale, 0.f, 0.f);
-    float noise = fbm3D(twistP.xyz * u_NoiseScale + timeOffset + noiseOffset)*0.5f + 0.5f;
+    float noise = fbm3D(twistP.xyz * u_NoiseScale + timeOffset + noiseOffset, u_Octaves)*0.5f + 0.5f;
     fs_Noise = noise;
 
     // Split normals- along x, and yz

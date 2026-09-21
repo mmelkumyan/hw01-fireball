@@ -1,4 +1,4 @@
-import {vec4, mat4} from 'gl-matrix';
+import {vec3, vec4, mat4} from 'gl-matrix';
 import Drawable from './Drawable';
 import {gl} from '../../globals';
 
@@ -30,6 +30,10 @@ class ShaderProgram {
   unifViewProj: WebGLUniformLocation;
   unifColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifDimensions: WebGLUniformLocation;
+  unifEye: WebGLUniformLocation;
+  unifRef: WebGLUniformLocation;
+  unifUp: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -50,6 +54,10 @@ class ShaderProgram {
     this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
     this.unifColor      = gl.getUniformLocation(this.prog, "u_Color");
     this.unifTime      = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifDimensions = gl.getUniformLocation(this.prog, "u_Dimensions");
+    this.unifEye        = gl.getUniformLocation(this.prog, "u_Eye");
+    this.unifRef        = gl.getUniformLocation(this.prog, "u_Ref");
+    this.unifUp         = gl.getUniformLocation(this.prog, "u_Up");
   }
 
   use() {
@@ -91,6 +99,26 @@ class ShaderProgram {
     this.use();
     if (this.unifTime !== -1) {
       gl.uniform1f(this.unifTime, t);
+    }
+  }
+
+  setDimensions(width: number, height: number) {
+    this.use();
+    if (this.unifDimensions !== null) {
+      gl.uniform2f(this.unifDimensions, width, height);
+    }
+  }
+
+  setEyeRefUp(eye: vec3, ref: vec3, up: vec3) {
+    this.use();
+    if (this.unifEye !== null) {
+      gl.uniform3fv(this.unifEye, eye);
+    }
+    if (this.unifRef !== null) {
+      gl.uniform3fv(this.unifRef, ref);
+    }
+    if (this.unifUp !== null) {
+      gl.uniform3fv(this.unifUp, up);
     }
   }
 

@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
+import glsl from 'vite-plugin-glsl';
  
 export default defineConfig({
+  // Resolves `#include` in .glsl files so shared helpers live in one place.
+  plugins: [glsl({ compress: false })],
   // Some older CommonJS packages (e.g. 3d-view-controls, stats-js) reference
   // Node's `global` object. Webpack used to polyfill this automatically;
   // Vite doesn't, so we alias it to the browser's `globalThis` ourselves.

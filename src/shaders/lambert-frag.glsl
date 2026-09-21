@@ -30,15 +30,15 @@ vec3 colorB = vec3(1.0f, 0.89f, 0.52f);
 vec3 colorC = vec3(1.0f, 0.6f, 0.14f);
 vec3 colorD = vec3(0.91f, 0.33f, 0.0f);
 vec3 colorE = vec3(0.6f, 0.16f, 0.08f);
-vec3 colorF = vec3(0.23f, 0.07f, 0.04f);
+vec3 colorF = vec3(0.33f, 0.08f, 0.03f);
 vec3 colorG = vec3(0.13f, 0.03f, 0.03f);
 float edgeA = 0.2f;
 float edgeB = 0.3f;
 float edgeC = 0.4f;
 float edgeD = 0.5f;
 float edgeE = 0.65f;
-float edgeF = 0.75f;
-float edgeG = 0.95f;
+float edgeF = 0.8f;
+float edgeG = 0.99f;
 
 vec3 colorGradient(float t) {
     vec3 c = colorA;

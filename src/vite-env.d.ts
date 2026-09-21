@@ -11,3 +11,9 @@ declare module 'stats-js' {
   const Stats: any;
   export default Stats;
 }
+
+// vite-plugin-glsl resolves #include and hands back the assembled source string.
+declare module '*.glsl' {
+  const source: string;
+  export default source;
+}
