@@ -13,18 +13,11 @@ in vec2 fs_UV;
 out vec4 out_Col;
 
 void main() {
-    vec2 uv = fs_UV;
-    // uv.x *= u_Dimensions.x / u_Dimensions.y;   // undo aspect squash
-
-    uv = uv * 2.f - 1.f; //[0,1] -> [-1,1]
-
-    // placeholder: radial falloff
-    // float d = length(uv);
-    // out_Col = vec4(mix(vec3(0.1, 0.05, 0.15), vec3(0.0), d), 1.0);
-
     float aspect = u_Dimensions.x / u_Dimensions.y;
-    float tanFovy = tan(3.14f / 2.f * 0.5);
+    // FOV = PI/2 = 90 degrees
+    float tanFovy = tan(3.14f / 1.8f * 0.5);
 
+    // Get vectors of camera dir
     vec3 forward = u_Eye - u_Ref;
     float len = length(forward);
     forward = forward / len;
@@ -34,9 +27,13 @@ void main() {
     vec3 screenPoint = u_Ref + fs_UV.x * len * aspect * tanFovy * right
                              + fs_UV.y * len * tanFovy * up;
     vec3 rayDir = normalize(screenPoint - u_Eye);
+    // Get ray from eye through pixel into the world
 
-    float noise = perlinNoise3D(-rayDir * 1.5f - vec3(u_Time, 0.f, 0.f) * 0.0009f
-                    + fbm3D(-rayDir * 2.f - vec3(u_Time, 0.f, 0.f) * 0.0003f, 5)
+    float scrollSpeed = 5.f;
+
+    // Create noise for clouse mask
+    float noise = perlinNoise3D(-rayDir * 1.9f + vec3(u_Time, 0.f, 0.f) * 0.0009f * scrollSpeed
+                    + fbm3D(-rayDir * 2.f + vec3(u_Time, 0.f, 0.f) * 0.0003f * scrollSpeed, 5)
                     );
     noise = noise * 0.5f + 0.5f;
 
@@ -44,28 +41,29 @@ void main() {
     float softness = .15f;
     float cloudMask = createMask(gain(noise, .2f), coverage, softness);
 
-    float cloudNoise = perlinNoise3D(-rayDir * 5.f - vec3(u_Time, 0.f, 0.f) * 0.0005f
-                    + fbm3D(-rayDir * 6.f - vec3(u_Time, 0.f, 0.f) * 0.0008f, 5)
+    // Create noise to perturb sky gradient 
+    float skyNoise = perlinNoise3D(-rayDir * 5.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0005f * scrollSpeed
+                    + fbm3D(-rayDir * 6.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0008f * scrollSpeed, 5)
                     );
-    
-    float yBlend = rayDir.y * 0.5 + 0.5f;
-    yBlend += cloudNoise * .3f;
+    float yBlend = (rayDir.y * 0.5 + 0.5f) + skyNoise * .3f;
     yBlend = clamp(yBlend, 0.f, 1.f);
-    
-    vec3 skyColor = palette(discretize(yBlend, 32), 
-        vec3(0.500, 0.500, 0.348),
-        vec3(0.500, 0.500, 0.208),
-        vec3(0.428, 0.248, 0.500),
-        vec3(0.000, 0.200, 0.500)
+
+    // Set sky color and cloud colors
+    vec3 skyColor = palette(discretize(yBlend, 48), 
+        // vec3(0.500, 0.500, 0.348),
+        // vec3(0.500, 0.500, 0.208),
+        // vec3(0.428, 0.248, 0.500),
+        // vec3(0.000, 0.200, 0.500)
+        vec3( 0.048, 0.358, 0.588),
+        vec3( 0.158, 0.698, -0.382),
+        vec3( 0.228, 0.138, 0.448),
+        vec3(-1.232, 1.188, 0.518)
     );
-    vec3 cloudColor = mix(vec3(1.f), skyColor, 0.35);
+    vec3 cloudColor = mix(vec3(1.f), skyColor, 0.35); // Clouds mix in a little bit of sky color
     cloudColor = cloudColor * remap(noise, 0.f,1.f, 0.5, 2.f);
 
+    // Final color mix
     vec3 color = mix(cloudColor, skyColor, cloudMask);
-
-    // Desaturate a bit
-    // color = gain(co)
-
 
     out_Col = vec4(color, 1.f);
 }
