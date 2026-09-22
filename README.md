@@ -1,9 +1,72 @@
 # HW 1: WebGL Fireball
 
 <p align="center">
-  <img width="360" height="360" src="fireball.png">
+  <img src="fireball_3.gif">
 </p>
-<p align="center">(source: Aidan Gideon, CIS 5660 Fall 2025)</p>
+<p align="center">(Mark Melkumyan, CIS 5660 Fall 2026)</p>
+
+# Project Description
+In this project I created shaders to turn a simple icosphere into a fireball! 🔥
+
+Here's my general approach to making the fireball. For the exact code with comments, see `src\shaders\fireball-vert.glsl` and `src\shaders\fireball-frag.glsl`.
+
+## Fireball Shader
+### Vertex pseudocode:
+
+> - Set trail width/length
+>   - Alternate between min/max based on pulse frequency
+> - Get x position blend factor in range [0,1]
+>   - Icosphere x ranges [-1,1]. Modify to [0,1]. 0 = tail of fireball, 1 = tip
+>   - Bias range heavily towards 1. We mostly want to move the front verts just a little, and the back ones a LOT
+> - Add twist to the vertex's yz domain using `rotatePoint2d`
+> - Sample FBM noise warped by another FBM
+>   - noise = FBM(twisted.xyz + time + FBM(twisted.xyz))
+> - Offset vertex positions by normal * noise
+>   - Bias more towards normals in the X, less toward YZ, so the tail is longer
+
+Overall, the idea is to make some lava-ish looking noise with `FBM(FBM())`, twist it, then stretch in the x dimension.
+
+### Fragment pseudocode:
+
+> - Pass noise from vertex shader
+> - Calculate distance from frag to tip of fireball
+>   - Normalize to [0,1]
+> - Sample gradient map of firey colors
+>   - rgb = color(t), where t = dist + noise
+
+Passing the noise from the vertex shader lets us shade the bumpier bits with darker colors.
+
+## Background Shader
+
+I also created a shader for the background! It's designed to look like a blue sky with white scrolling clouds.
+
+No real vertex shader, just pass a screenspace quad in NDC.
+
+### Fragment pseudocode:
+
+
+> - Get ray passing through pixel to origin (referenced from CIS5600 material)
+>   - When normalized, this ray maps every pixel to a positon on a unit sphere.
+>     - This lets us make a skydome without an actual dome! Just a single quad!
+> - Create cloud cover mask. This will determine which pixels use cloud color and which pixels use sky color.
+>   - noise = perlinNoise3D(ray + time + FBM3D(ray + time))
+>   - Lower noise's gain to add more contrast 
+>   - Use a threshold (smoothstep) to solidfy the line between cloud/sky
+> - Create sky color
+>   - skyNoise = perlinNoise3D(ray + time + FBM3D(ray + time)) again!
+>     - Scale this noise so it looks smaller and moves slower- helps fake parallax
+>   - Get y position blend factor in range [0,1]. 0 = bottom of dome, 1 = top of dome
+>   - Perturb this y value by skyNoise
+>     - This will help stir up the gradient (not just a simple linear color change)
+>   - Sample gradient map of blue colors using yBlend
+> - Create cloud color- just white!
+> - Final color = mix(cloud color, sky color, cloud mask)
+>   - When mask = 0, use cloud color. When mask = 1, use sky color.
+
+
+
+-----------
+# Assignment Description
 
 ## Objective
 Get comfortable with using WebGL and its shaders to generate an interesting 3D, continuous surface using a multi-octave noise algorithm.

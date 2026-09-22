@@ -30,12 +30,9 @@ uniform float u_TwistSpeed; // Speed at which we rotate
 uniform float u_NoiseScale; // Scale of noise offset
 uniform int u_Octaves; // Number of octaves in FBM noise
 
-in vec4 vs_Pos;             // The array of vertex positions passed to the shader
-
+in vec4 vs_Pos; 
 in vec4 vs_Nor;             // The array of vertex normals passed to the shader
-
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
-
 
 out vec4 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
@@ -56,6 +53,7 @@ float sinTime(float amp, float freq) {
 
 void main()
 {
+    // --- <BOILERPLATE> ---
     fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
 
     mat3 invTranspose = mat3(u_ModelInvTr);
@@ -65,10 +63,10 @@ void main()
                                                             // perpendicular to the surface after the surface is transformed by
                                                             // the model matrix.
 
-
     vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
+    // --- </BOILERPLATE> ---
 
     // Pulse width/length
     float trailWidth =  mix(1.f, 0.1f, sinTime(1.f, u_PulseFreq));
@@ -97,10 +95,8 @@ void main()
     vec3 xN = vec3(n.x, 0.f, 0.f);
     vec3 yzN = vec3(0.f, n.y, n.z);
 
-    float xBias = 0.5f;
-    float yzBias = 0.05f;
-    float xStretch = mix(trailLength, 1.f, bias(xPosBlend, xBias)); 
-    float yzStretch = mix(trailWidth, 1.f, bias(xPosBlend, yzBias));
+    float xStretch = mix(trailLength, 1.f, bias(xPosBlend, 0.5f)); 
+    float yzStretch = mix(trailWidth, 1.f, bias(xPosBlend, 0.07f));
 
     // Offset normals
     modelposition.xyz += (xN * xStretch + yzN * yzStretch) * noise;

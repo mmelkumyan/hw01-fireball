@@ -8,8 +8,8 @@ import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
-import lambertVertSource from './shaders/lambert-vert.glsl';
-import lambertFragSource from './shaders/lambert-frag.glsl';
+import fireballVertSource from './shaders/fireball-vert.glsl';
+import fireballFragSource from './shaders/fireball-frag.glsl';
 
 import backgroundVertSource from './shaders/background-vert.glsl';
 import backgroundFragSource from './shaders/background-frag.glsl';
@@ -115,9 +115,9 @@ function main() {
   renderer.setClearColor(0.2, 0.2, 0.2, 1);
   gl.enable(gl.DEPTH_TEST);
 
-  const lambert = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, lambertVertSource),
-    new Shader(gl.FRAGMENT_SHADER, lambertFragSource),
+  const fireball = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, fireballVertSource),
+    new Shader(gl.FRAGMENT_SHADER, fireballFragSource),
   ]);
 
   const background = new ShaderProgram([
@@ -141,7 +141,7 @@ function main() {
     // Render background
     renderer.renderBackground(camera, background, square, time, shaderParams, intParams);
     // Render fireball
-    renderer.render(camera, lambert, [
+    renderer.render(camera, fireball, [
       icosphere,
     ], time++, shaderParams, intParams);
     stats.end();
