@@ -24,6 +24,7 @@ const shaderParams = {
   u_TwistSpeed: 0.06,
   u_NoiseScale: 1.0,
   u_Octaves: 3,
+  u_ScrollSpeed: 1.5,
 };
 
 const intParams = new Set(['u_Octaves']);
@@ -88,6 +89,10 @@ function main() {
   noiseFolder.add(shaderParams, 'u_Octaves', 1, 6).step(1).name('octaves');
   noiseFolder.open();
 
+  const bgFolder = gui.addFolder('Background');
+  bgFolder.add(shaderParams, 'u_ScrollSpeed', 0, 10).step(0.1).name('scroll speed');
+  bgFolder.open();
+
   gui.add(controls, 'Load Scene');
   gui.add(controls, 'Reset Defaults');
 
@@ -134,7 +139,7 @@ function main() {
     }
 
     // Render background
-    renderer.renderBackground(camera, background, square, time);
+    renderer.renderBackground(camera, background, square, time, shaderParams, intParams);
     // Render fireball
     renderer.render(camera, lambert, [
       icosphere,

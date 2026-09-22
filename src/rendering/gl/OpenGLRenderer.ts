@@ -49,10 +49,20 @@ class OpenGLRenderer {
     }
   }
 
-  renderBackground(camera: Camera, prog: ShaderProgram, quad: Drawable, t: GLfloat) {
+  renderBackground(camera: Camera, prog: ShaderProgram, quad: Drawable, t: GLfloat,
+                   shaderParams: {[name: string]: number} = {},
+                   intParams: Set<string> = new Set()) {
     prog.setTime(t);
     prog.setDimensions(this.canvas.width, this.canvas.height);
     prog.setEyeRefUp(camera.controls.eye, camera.controls.center, camera.controls.up);
+
+    for (let name in shaderParams) {
+      if (intParams.has(name)) {
+        prog.setInt(name, shaderParams[name]);
+      } else {
+        prog.setFloat(name, shaderParams[name]);
+      }
+    }
 
     gl.depthMask(false);
     prog.draw(quad);

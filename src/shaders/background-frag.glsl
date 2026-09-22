@@ -8,6 +8,7 @@ uniform vec2 u_Dimensions;
 uniform vec3 u_Eye;
 uniform vec3 u_Ref;
 uniform vec3 u_Up;
+uniform float u_ScrollSpeed;
 
 in vec2 fs_UV;
 out vec4 out_Col;
@@ -29,11 +30,9 @@ void main() {
     vec3 rayDir = normalize(screenPoint - u_Eye);
     // Get ray from eye through pixel into the world
 
-    float scrollSpeed = 5.f;
-
-    // Create noise for clouse mask
-    float noise = perlinNoise3D(-rayDir * 1.9f + vec3(u_Time, 0.f, 0.f) * 0.0009f * scrollSpeed
-                    + fbm3D(-rayDir * 2.f + vec3(u_Time, 0.f, 0.f) * 0.0003f * scrollSpeed, 5)
+    // Create noise for cloud mask
+    float noise = perlinNoise3D(-rayDir * 1.9f + vec3(u_Time, 0.f, 0.f) * 0.0009f * u_ScrollSpeed
+                    + fbm3D(-rayDir * 2.f + vec3(u_Time, 0.f, 0.f) * 0.0003f * u_ScrollSpeed, 4)
                     );
     noise = noise * 0.5f + 0.5f;
 
@@ -42,14 +41,14 @@ void main() {
     float cloudMask = createMask(gain(noise, .2f), coverage, softness);
 
     // Create noise to perturb sky gradient 
-    float skyNoise = perlinNoise3D(-rayDir * 5.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0005f * scrollSpeed
-                    + fbm3D(-rayDir * 6.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0008f * scrollSpeed, 5)
+    float skyNoise = perlinNoise3D(-rayDir * 5.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0005f * u_ScrollSpeed
+                    + fbm3D(-rayDir * 6.f + vec3(u_Time, -u_Time/1.f, 0.f) * 0.0008f * u_ScrollSpeed, 4)
                     );
     float yBlend = (rayDir.y * 0.5 + 0.5f) + skyNoise * .3f;
     yBlend = clamp(yBlend, 0.f, 1.f);
 
     // Set sky color and cloud colors
-    vec3 skyColor = palette(discretize(yBlend, 48), 
+    vec3 skyColor = palette(discretize(yBlend, 32), 
         // vec3(0.500, 0.500, 0.348),
         // vec3(0.500, 0.500, 0.208),
         // vec3(0.428, 0.248, 0.500),
